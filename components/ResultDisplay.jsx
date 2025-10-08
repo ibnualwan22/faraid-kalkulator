@@ -1,4 +1,6 @@
 'use client';
+import JaddWalIkhwahDisplay from './JaddWalIkhwahDisplay'; // <-- TAMBAHKAN INI
+
 
 export default function ResultDisplay({ result }) {
   if (!result) return null;
@@ -44,6 +46,12 @@ export default function ResultDisplay({ result }) {
             </div>
         </div>
       </div>
+      {result.detailKasus?.jadd_wal_ikhwah?.simulasi && (
+    <JaddWalIkhwahDisplay 
+        data={result.detailKasus.jadd_wal_ikhwah}
+        ahliWaris={result.output.filter(aw => !aw.isMahjub)}
+    />
+)}
       
       {/* Bagian Tabel */}
       <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
