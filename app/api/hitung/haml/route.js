@@ -1,88 +1,87 @@
+// app/api/hitung/haml/route.js
+
 import { NextResponse } from 'next/server';
 import { calculateFaraid } from '@/lib/faraid-engine';
 import { ahliWarisData } from '@/lib/rules/ahliWarisData';
+import { kpkArray } from '@/lib/utils/math';
 
+// Fungsi Perbandingan (Muqaranah) tidak berubah, sudah benar.
+function performHamlComparison(hasilPerhitungan) {
+    // === PERBAIKAN DI SINI ===
+    // 'input' ada di level atas, bukan di dalam 'summary'.
+    const tirkah = hasilPerhitungan[0]?.input.tirkah || 0; 
+    
+    const semuaAhliWarisUnik = [...new Set(hasilPerhitungan.flatMap(h => h.output.filter(aw => !aw.isJanin).map(aw => aw.key)))];
+    const semuaAM = hasilPerhitungan.map(h => h.summary.ashlulMasalahTashih || h.summary.ashlulMasalahAkhir);
+    const ashlulMasalahJamiah = kpkArray(semuaAM);
+    const perbandingan = {};
+    let totalSahamYakin = 0;
+
+    semuaAhliWarisUnik.forEach(key => {
+        const dataAhliWaris = ahliWarisData[key] || { name: key };
+        const sahamNormalizedPerSkenario = hasilPerhitungan.map(skenario => {
+            const amSkenario = skenario.summary.ashlulMasalahTashih || skenario.summary.ashlulMasalahAkhir;
+            const aw = skenario.output.find(aw => aw.key === key);
+            const sahamSkenario = (aw && !aw.isMahjub) ? (aw.sahamTashih || aw.sahamAkhir || 0) : 0;
+            return Math.round((sahamSkenario / amSkenario) * ashlulMasalahJamiah);
+        });
+        const sahamTerkecil = Math.min(...sahamNormalizedPerSkenario);
+        totalSahamYakin += sahamTerkecil;
+        perbandingan[key] = {
+            nama: dataAhliWaris.name,
+            sahamPerSkenario: sahamNormalizedPerSkenario,
+            sahamTerkecil: sahamTerkecil,
+        };
+    });
+
+    const mauqufSaham = ashlulMasalahJamiah - totalSahamYakin;
+    const mauqufHarta = (parseFloat(tirkah) / ashlulMasalahJamiah) * mauqufSaham;
+
+    return { perbandingan, ashlulMasalahJamiah, mauqufSaham, mauqufHarta };
+}
 export async function POST(request) {
     try {
         const body = await request.json();
         const { ahliWaris, tirkah, hubunganBayi } = body;
 
-        if (!hubunganBayi) {
-            return NextResponse.json({ error: 'Hubungan janin dengan mayit harus ditentukan.' }, { status: 400 });
+        if (!hubunganBayi || !ahliWaris || tirkah === undefined) {
+            return NextResponse.json({ error: 'Data input tidak lengkap.' }, { status: 400 });
         }
 
-        // --- 1. Definisikan Semua Skenario ---
-        const scenarios = [
-            { nama: 'Janin Dianggap Wafat', modifikasi: {} },
-            { nama: '1 Laki-laki', modifikasi: { [`${hubunganBayi}_lk`]: 1 } },
-            { nama: '1 Perempuan', modifikasi: { [`${hubunganBayi}_pr`]: 1 } },
-            { nama: '2 Laki-laki', modifikasi: { [`${hubunganBayi}_lk`]: 2 } },
-            { nama: '2 Perempuan', modifikasi: { [`${hubunganBayi}_pr`]: 2 } },
-            { nama: '1 Lk & 1 Pr', modifikasi: { [`${hubunganBayi}_lk`]: 1, [`${hubunganBayi}_pr`]: 1 } },
+        const keyLk = hubunganBayi === 'anak' ? 'anak_lk' : 'cucu_lk';
+        const keyPr = hubunganBayi === 'anak' ? 'anak_pr' : 'cucu_pr';
+
+        const skenarioHaml = [
+            { nama: 'Wafat', modifikasi: (aw) => aw },
+            { nama: '1 Laki-laki', modifikasi: (aw) => ({ ...aw, [keyLk]: (aw[keyLk] || 0) + 1 }) },
+            { nama: '1 Perempuan', modifikasi: (aw) => ({ ...aw, [keyPr]: (aw[keyPr] || 0) + 1 }) },
+            { nama: '2 Laki-laki', modifikasi: (aw) => ({ ...aw, [keyLk]: (aw[keyLk] || 0) + 2 }) },
+            { nama: '2 Perempuan', modifikasi: (aw) => ({ ...aw, [keyPr]: (aw[keyPr] || 0) + 2 }) },
+            { nama: '1 Lk & 1 Pr', modifikasi: (aw) => ({ ...aw, [keyLk]: (aw[keyLk] || 0) + 1, [keyPr]: (aw[keyPr] || 0) + 1 }) }
         ];
 
-        // --- 2. Jalankan Perhitungan untuk Setiap Skenario ---
-        const hasilSkenario = scenarios.map(s => {
-            const inputSkenario = {
-                tirkah,
-                ahliWaris: { ...ahliWaris, ...s.modifikasi },
-            };
-            // Hapus properti yg jumlahnya 0, jika ada
-            for(const key in inputSkenario.ahliWaris) {
-                if (inputSkenario.ahliWaris[key] === 0) {
-                    delete inputSkenario.ahliWaris[key];
-                }
-            }
-            return { nama: s.nama, hasil: calculateFaraid(inputSkenario) };
-        });
-
-        // --- 3. Lakukan Perbandingan (Muqaranah) ---
-        const perbandingan = {};
-        const semuaAhliWarisUnik = new Set();
-        hasilSkenario.forEach(s => {
-            s.hasil.output.forEach(aw => semuaAhliWarisUnik.add(aw.key));
-        });
-
-        semuaAhliWarisUnik.forEach(key => {
-            if (!ahliWarisData[key]) return; // Lewati jika key tidak valid
-
-            const proporsiTerkecil = Math.min(...hasilSkenario.map(s => {
-                const aw = s.hasil.output.find(a => a.key === key);
-                if (!aw || aw.isMahjub) return 0;
+        const hasilPerhitungan = await Promise.all(
+            skenarioHaml.map(async (skenario) => {
+                const ahliWarisSkenario = skenario.modifikasi(ahliWaris);
+                // **PERUBAHAN KUNCI**: Panggil calculateFaraid dan simpan SELURUH HASILNYA
+                const result = calculateFaraid({ ahliWaris: ahliWarisSkenario, tirkah: parseFloat(tirkah) });
                 
-                const am = s.hasil.summary.ashlulMasalahTashih || s.hasil.summary.ashlulMasalahAkhir;
-                const saham = (s.hasil.summary.ashlulMasalahTashih ? aw.sahamTashih : aw.sahamAkhir) || 0;
-                return saham / am;
-            }));
+                result.output.forEach(aw => {
+                    if (aw.key === keyLk || aw.key === keyPr) aw.isJanin = true;
+                });
+                
+                // Kembalikan seluruh objek hasil, bukan hanya sebagian
+                return { namaSkenario: skenario.nama, ...result };
+            })
+        );
+        
+        const hasilAkhir = performHamlComparison(hasilPerhitungan);
 
-            perbandingan[key] = {
-                nama: ahliWarisData[key].name,
-                proporsiTerkecil,
-                bagianYakin: tirkah * proporsiTerkecil,
-                // Simpan juga proporsi di setiap skenario untuk ditampilkan
-                proporsiPerSkenario: hasilSkenario.map(s => {
-                    const aw = s.hasil.output.find(a => a.key === key);
-                     if (!aw || aw.isMahjub) return 0;
-                    const am = s.hasil.summary.ashlulMasalahTashih || s.hasil.summary.ashlulMasalahAkhir;
-                    const saham = (s.hasil.summary.ashlulMasalahTashih ? aw.sahamTashih : aw.sahamAkhir) || 0;
-                    return saham / am;
-                })
-            };
-        });
+        return NextResponse.json({
+            detailPerSkenario: hasilPerhitungan, // Mengirim hasil lengkap untuk setiap skenario
+            hasilAkhir: hasilAkhir
+        }, { status: 200 });
 
-        // --- 4. Hitung Mauquf ---
-        const totalBagianYakin = Object.values(perbandingan).reduce((sum, p) => sum + p.bagianYakin, 0);
-        const mauquf = tirkah - totalBagianYakin;
-
-        // --- 5. Siapkan Respons Final ---
-        const response = {
-            detail_skenario: hasilSkenario,
-            hasil_perbandingan: perbandingan,
-            mauquf,
-            tirkah
-        };
-
-        return NextResponse.json(response, { status: 200 });
     } catch (error) {
         console.error("API Haml Error:", error);
         return NextResponse.json({ error: 'Terjadi kesalahan pada server saat menghitung Haml.' }, { status: 500 });
