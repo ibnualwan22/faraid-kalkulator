@@ -1,86 +1,96 @@
+// app/api/hitung/khuntsa/route.js
+
 import { NextResponse } from 'next/server';
 import { calculateFaraid } from '@/lib/faraid-engine';
 import { ahliWarisData } from '@/lib/rules/ahliWarisData';
+import { kpkArray } from '@/lib/utils/math';
 
-/**
- * Fungsi untuk mengubah key ahli waris (misal: dari anak_pr ke anak_lk)
- */
-function gantiJenisKelamin(ahliWaris, khuntsaKey) {
-    const newAhliWaris = { ...ahliWaris };
-    const jumlah = newAhliWaris[khuntsaKey];
-    delete newAhliWaris[khuntsaKey];
+// Peta untuk mengubah kunci ahli waris dari laki-laki ke perempuan
+const keyMapLkKePr = {
+    'anak_lk': 'anak_pr',
+    'cucu_lk': 'cucu_pr',
+    'saudara_lk_kandung': 'saudari_kandung',
+    'saudara_lk_seayah': 'saudari_seayah',
+    'saudara_lk_seibu': 'saudari_seibu',
+    // Tambahkan pasangan lain jika ada ahli waris yang bisa menjadi khuntsa
+};
 
-    // Logika sederhana untuk mengganti pasangan gender
-    let lawanJenisKey = '';
-    if (khuntsaKey === 'anak_pr') lawanJenisKey = 'anak_lk';
-    if (khuntsaKey === 'anak_lk') lawanJenisKey = 'anak_pr';
-    // ... tambahkan pasangan lain jika perlu (cucu_pr -> cucu_lk, dll)
+// Fungsi Perbandingan (Muqaranah)
+function performKhuntsaComparison(hasilLaki, hasilPerempuan) {
+    const tirkah = hasilLaki.input.tirkah || 0;
+    const semuaAhliWarisUnik = [...new Set([...hasilLaki.output.map(aw => aw.key), ...hasilPerempuan.output.map(aw => aw.key)])];
+    
+    const amLaki = hasilLaki.summary.ashlulMasalahTashih || hasilLaki.summary.ashlulMasalahAkhir;
+    const amPerempuan = hasilPerempuan.summary.ashlulMasalahTashih || hasilPerempuan.summary.ashlulMasalahAkhir;
+    const ashlulMasalahJamiah = kpkArray([amLaki, amPerempuan]);
+    
+    const perbandingan = {};
+    let totalSahamYakin = 0;
 
-    if (lawanJenisKey) {
-        newAhliWaris[lawanJenisKey] = jumlah;
-    } else {
-        // Jika tidak ada pasangan, anggap saja tetap (kasus error atau ahli waris tunggal)
-        newAhliWaris[khuntsaKey] = jumlah;
-    }
-    return newAhliWaris;
+    semuaAhliWarisUnik.forEach(key => {
+        const awLaki = hasilLaki.output.find(aw => aw.key === key);
+        const awPerempuan = hasilPerempuan.output.find(aw => aw.key === key);
+        
+        // Pilih nama dari data yang valid
+        const nama = awLaki?.nama || awPerempuan?.nama || ahliWarisData[key]?.name || key;
+
+        const sahamLaki = (awLaki && !awLaki.isMahjub) ? (awLaki.sahamTashih || awLaki.sahamAkhir || 0) : 0;
+        const sahamPerempuan = (awPerempuan && !awPerempuan.isMahjub) ? (awPerempuan.sahamTashih || awPerempuan.sahamAkhir || 0) : 0;
+        
+        const sahamLakiNormalized = Math.round((sahamLaki / amLaki) * ashlulMasalahJamiah);
+        const sahamPerempuanNormalized = Math.round((sahamPerempuan / amPerempuan) * ashlulMasalahJamiah);
+        const sahamTerkecil = Math.min(sahamLakiNormalized, sahamPerempuanNormalized);
+        
+        totalSahamYakin += sahamTerkecil;
+        perbandingan[key] = {
+            nama,
+            sahamPerSkenario: [sahamLakiNormalized, sahamPerempuanNormalized],
+            sahamTerkecil,
+        };
+    });
+
+    const mauqufSaham = ashlulMasalahJamiah - totalSahamYakin;
+    const mauqufHarta = (parseFloat(tirkah) / ashlulMasalahJamiah) * mauqufSaham;
+
+    return { perbandingan, ashlulMasalahJamiah, mauqufSaham, mauqufHarta };
 }
+
 
 export async function POST(request) {
     try {
         const body = await request.json();
         const { ahliWaris, tirkah, khuntsaKey } = body;
 
-        if (!khuntsaKey || !ahliWaris[khuntsaKey]) {
-            return NextResponse.json({ error: 'Ahli waris Khuntsa harus ditentukan.' }, { status: 400 });
+        if (!khuntsaKey || !ahliWaris || tirkah === undefined) {
+            return NextResponse.json({ error: 'Data input tidak lengkap.' }, { status: 400 });
         }
-
+        
         // --- Skenario 1: Khuntsa dianggap LAKI-LAKI ---
-        const inputLaki = {
-            tirkah,
-            ahliWaris: gantiJenisKelamin(ahliWaris, khuntsaKey)
-        };
-        const hasilLaki = calculateFaraid(inputLaki);
+        // Ahli waris tidak perlu diubah
+        const skenarioLaki = calculateFaraid({ ahliWaris, tirkah: parseFloat(tirkah) });
 
         // --- Skenario 2: Khuntsa dianggap PEREMPUAN ---
-        const inputPerempuan = { tirkah, ahliWaris };
-        const hasilPerempuan = calculateFaraid(inputPerempuan);
+        // Ubah kunci ahli waris khuntsa ke versi perempuannya
+        const ahliWarisPerempuan = { ...ahliWaris };
+        const khuntsaQuantity = ahliWarisPerempuan[khuntsaKey];
+        const khuntsaKeyPerempuan = keyMapLkKePr[khuntsaKey];
+        
+        if (!khuntsaKeyPerempuan) {
+            return NextResponse.json({ error: `Ahli waris ${khuntsaKey} tidak bisa menjadi khuntsa.` }, { status: 400 });
+        }
+        
+        delete ahliWarisPerempuan[khuntsaKey];
+        ahliWarisPerempuan[khuntsaKeyPerempuan] = khuntsaQuantity;
+        const skenarioPerempuan = calculateFaraid({ ahliWaris: ahliWarisPerempuan, tirkah: parseFloat(tirkah) });
 
-        // --- Tahap 3: Perbandingan (Muqaranah) & Mauquf ---
-        const perbandingan = {};
-        let totalBagianYakin = 0;
+        // --- Lakukan Perbandingan ---
+        const hasilAkhir = performKhuntsaComparison(skenarioLaki, skenarioPerempuan);
 
-        // Kumpulkan semua ahli waris unik dari kedua skenario
-        const semuaAhliWarisUnik = [...new Set([...Object.keys(hasilLaki.summary.saham), ...Object.keys(hasilPerempuan.summary.saham)])];
-
-        semuaAhliWarisUnik.forEach(key => {
-            const sahamLaki = hasilLaki.summary.saham[key] || 0;
-            const sahamPerempuan = hasilPerempuan.summary.saham[key] || 0;
-            const sahamTerkecil = Math.min(sahamLaki, sahamPerempuan);
-
-            const bagianYakin = (tirkah / hasilLaki.summary.ashlulMasalahAkhir) * sahamTerkecil; // Asumsi AM sama, perlu disempurnakan jika AM beda
-            
-            perbandingan[key] = {
-                nama: ahliWarisData[key]?.name,
-                sahamLaki,
-                sahamPerempuan,
-                sahamTerkecil,
-                bagianYakin
-            };
-            totalBagianYakin += bagianYakin;
-        });
-
-        const mauquf = tirkah - totalBagianYakin;
-
-        // --- Finalisasi Output ---
-        const response = {
-            skenarioLaki: hasilLaki,
-            skenarioPerempuan: hasilPerempuan,
-            hasilPerbandingan: perbandingan,
-            mauquf: mauquf,
-            bagianYakin: totalBagianYakin
-        };
-
-        return NextResponse.json(response, { status: 200 });
+        return NextResponse.json({
+            skenarioLaki,
+            skenarioPerempuan,
+            hasilAkhir
+        }, { status: 200 });
 
     } catch (error) {
         console.error("API Khuntsa Error:", error);
