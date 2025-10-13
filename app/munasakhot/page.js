@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import MunasakhotForm from '@/components/MunasakhotForm';
 import MunasakhotResultDisplay from '@/components/MunasakhotResultDisplay';
 
-export default function munasakhotPage() {
+export default function MunasakhotPage() {
     const [heirs, setHeirs] = useState([]);
     const [result, setResult] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
