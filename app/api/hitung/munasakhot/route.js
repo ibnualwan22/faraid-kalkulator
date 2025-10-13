@@ -13,9 +13,12 @@ export async function POST(request) {
              return NextResponse.json({ error: 'Data input tidak lengkap.' }, { status: 400 });
         }
 
-        // --- TAHAP 1: Hitung Masalah Pertama (tanpa dikali) ---
+        // --- TAHAP 1 & 2: Hitung Masalah Awal ---
         const hasilMasalahPertama = calculateFaraid(masalah_pertama);
+        const hasilMasalahKedua = calculateFaraid({ ahliWaris: masalah_kedua.ahliWaris, tirkah: 0 }); 
+
         const amPertama = hasilMasalahPertama.summary.ashlulMasalahTashih || hasilMasalahPertama.summary.ashlulMasalahAkhir;
+        const amKedua = hasilMasalahKedua.summary.ashlulMasalahTashih || hasilMasalahKedua.summary.ashlulMasalahAkhir;
         
         const mayitKedua = hasilMasalahPertama.output.find(aw => aw.key === mayit_kedua_key);
         if (!mayitKedua || mayitKedua.isMahjub) {
@@ -25,52 +28,47 @@ export async function POST(request) {
         const sahamFinalKey1 = hasilMasalahPertama.summary.ashlulMasalahTashih ? 'sahamTashih' : 'sahamAkhir';
         const sihamMayitKedua = mayitKedua[sahamFinalKey1];
 
-        // --- TAHAP 2: Hitung Masalah Kedua (tanpa dikali) ---
-        const hasilMasalahKedua = calculateFaraid({ ahliWaris: masalah_kedua.ahliWaris, tirkah: 0 }); 
-        const amKedua = hasilMasalahKedua.summary.ashlulMasalahTashih || hasilMasalahKedua.summary.ashlulMasalahAkhir;
-
-        // --- TAHAP 3: Lakukan Perhitungan Penggabungan (Jami'ah) di Latar Belakang ---
+        // --- TAHAP 3: Lakukan Perhitungan Penggabungan ---
         const fpb = fpbEuclid(sihamMayitKedua, amKedua);
         const pengaliMasalahPertama = amKedua / fpb;
         const pengaliMasalahKedua = sihamMayitKedua / fpb;
         const amFinal = amPertama * pengaliMasalahPertama;
 
-        // --- TAHAP 4: Hitung Saham & Harta Final Gabungan ---
-        let hasilGabungan = {};
-        // Ahli waris dari Masalah #1
-        hasilMasalahPertama.output.forEach(aw => {
-            if (aw.key !== mayit_kedua_key && !aw.isMahjub) {
-                hasilGabungan[aw.key] = { nama: aw.nama, saham: (aw[sahamFinalKey1] || 0) * pengaliMasalahPertama };
-            }
+        // --- TAHAP 4: Buat DUA SET hasil akhir yang terpisah ---
+        const tirkahAwal = parseFloat(masalah_pertama.tirkah);
+
+        // Hasil akhir untuk ahli waris dari Masalah #1
+        const hasilAkhir1 = hasilMasalahPertama.output.map(aw => {
+            const sahamAwal = aw[sahamFinalKey1] || 0;
+            const sahamFinal = sahamAwal * pengaliMasalahPertama;
+            const bagianHarta = (tirkahAwal / amFinal) * sahamFinal;
+            return { ...aw, sahamAwal, sahamFinal, bagianHarta };
         });
-        // Ahli waris dari Masalah #2
-        hasilMasalahKedua.output.forEach(aw => {
-            if (!aw.isMahjub) {
-                const sahamFinalKey2 = hasilMasalahKedua.summary.ashlulMasalahTashih ? 'sahamTashih' : 'sahamAkhir';
-                const sahamBaru = (aw[sahamFinalKey2] || 0) * pengaliMasalahKedua;
-                if (hasilGabungan[aw.key]) {
-                    hasilGabungan[aw.key].saham += sahamBaru;
-                } else {
-                    hasilGabungan[aw.key] = { nama: aw.nama, saham: sahamBaru };
-                }
-            }
+
+        // Hasil akhir untuk ahli waris dari Masalah #2
+        const hasilAkhir2 = hasilMasalahKedua.output.map(aw => {
+            const sahamFinalKey2 = hasilMasalahKedua.summary.ashlulMasalahTashih ? 'sahamTashih' : 'sahamAkhir';
+            const sahamAwal = aw[sahamFinalKey2] || 0;
+            const sahamFinal = sahamAwal * pengaliMasalahKedua;
+            const bagianHarta = (tirkahAwal / amFinal) * sahamFinal;
+            return { ...aw, sahamAwal, sahamFinal, bagianHarta };
         });
         
-        // --- TAHAP 5: Siapkan Respons Lengkap untuk Frontend ---
+        // --- TAHAP 5: Siapkan Respons ---
         const response = {
-            hasilMasalahPertama, // Hasil asli, sebelum dikali
-            hasilMasalahKedua,   // Hasil asli, sebelum dikali
             namaMayitKedua,
             mayit_kedua_key,
-            proses_tashih: {
-                sihamMayitKedua,
-                pengaliMasalahPertama,
-                pengaliMasalahKedua,
-                amFinal,
+            proses_tashih: { amFinal },
+            hasil_akhir_1: {
+                summary: hasilMasalahPertama.summary,
+                output: hasilAkhir1,
+                input: hasilMasalahPertama.input,
             },
-            hasilGabungan: Object.entries(hasilGabungan).map(([key, value]) => ({ // Data saham & harta final
-                key, ...value, bagianHarta: (masalah_pertama.tirkah / amFinal) * value.saham
-            }))
+            hasil_akhir_2: {
+                summary: hasilMasalahKedua.summary,
+                output: hasilAkhir2,
+                input: { ahliWaris: masalah_kedua.ahliWaris, tirkah: mayitKedua.bagianHarta }
+            }
         };
         
         return NextResponse.json(response, { status: 200 });
