@@ -1,66 +1,25 @@
+// app/kasus-khusus/munasakhot/page.js
+
 'use client';
 import { useState, useEffect } from 'react';
 import MunasakhotForm from '@/components/MunasakhotForm';
 import MunasakhotResultDisplay from '@/components/MunasakhotResultDisplay';
 
-export default function MunasakhotPage() {
-    // State untuk daftar ahli waris dari API
+export default function munasakhotPage() {
     const [heirs, setHeirs] = useState([]);
-    
-    // State untuk Masalah Pertama
-    const [selectedHeirs1, setSelectedHeirs1] = useState([]);
-    
-    // State untuk Masalah Kedua
-    const [selectedHeirs2, setSelectedHeirs2] = useState([]);
-
     const [result, setResult] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Mengambil daftar ahli waris saat komponen dimuat
     useEffect(() => {
         const fetchHeirs = async () => {
-            try {
-                const response = await fetch('/api/heirs');
-                if (!response.ok) throw new Error('Gagal memuat daftar ahli waris.');
-                const data = await response.json();
-                setHeirs(data);
-            } catch (err) {
-                setError(err.message);
-            }
+            const response = await fetch('/api/heirs');
+            const data = await response.json();
+            setHeirs(data);
         };
         fetchHeirs();
     }, []);
 
-    // --- HANDLER UNTUK MASALAH PERTAMA ---
-    const handleHeirToggle1 = (heir) => {
-        setSelectedHeirs1(prev => 
-            prev.find(h => h.key === heir.key) 
-            ? prev.filter(h => h.key !== heir.key) 
-            : [...prev, { ...heir, quantity: 1 }]
-        );
-    };
-    const handleQuantityChange1 = (heirKey, quantity) => {
-        setSelectedHeirs1(prev => 
-            prev.map(h => h.key === heirKey ? { ...h, quantity: Math.max(1, quantity) } : h)
-        );
-    };
-    
-    // --- HANDLER UNTUK MASALAH KEDUA ---
-    const handleHeirToggle2 = (heir) => {
-        setSelectedHeirs2(prev => 
-            prev.find(h => h.key === heir.key) 
-            ? prev.filter(h => h.key !== heir.key) 
-            : [...prev, { ...heir, quantity: 1 }]
-        );
-    };
-    const handleQuantityChange2 = (heirKey, quantity) => {
-        setSelectedHeirs2(prev => 
-            prev.map(h => h.key === heirKey ? { ...h, quantity: Math.max(1, quantity) } : h)
-        );
-    };
-
-    // Fungsi untuk memanggil API Munasakhot
     const handleCalculate = async (data) => {
         setIsLoading(true);
         setError(null);
@@ -83,25 +42,16 @@ export default function MunasakhotPage() {
     
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold">Perhitungan Waris Munasakhot (المناسخات)</h1>
-            <p className="text-gray-600">Gunakan halaman ini jika ada ahli waris yang meninggal sebelum harta warisan sempat dibagikan.</p>
-            
-            <MunasakhotForm 
-                heirs={heirs}
-                selectedHeirs1={selectedHeirs1}
-                onHeirToggle1={handleHeirToggle1}
-                onQuantityChange1={handleQuantityChange1}
-                selectedHeirs2={selectedHeirs2}
-                onHeirToggle2={handleHeirToggle2}
-                onQuantityChange2={handleQuantityChange2}
-                onCalculate={handleCalculate}
-                isLoading={isLoading}
-            />
-            
-            {error && <div className="bg-red-100 p-4 rounded-md text-red-700 text-center">{error}</div>}
-            
-            {result && (
-                <div className="mt-8">
+            <h1 className="text-3xl font-bold text-center">Kalkulator Waris Berlapis (munasakhot)</h1>
+            {error && <div className="bg-red-100 text-red-700 p-3 rounded">{error}</div>}
+
+            {!result ? (
+                <MunasakhotForm heirs={heirs} onCalculate={handleCalculate} isLoading={isLoading} />
+            ) : (
+                <div>
+                    <button onClick={() => setResult(null)} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg mb-4">
+                        🔄 Hitung Ulang
+                    </button>
                     <MunasakhotResultDisplay result={result} />
                 </div>
             )}

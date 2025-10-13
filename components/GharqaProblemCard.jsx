@@ -1,3 +1,5 @@
+// components/GharqaProblemCard.jsx
+
 'use client';
 import HeirSelector from './HeirSelector';
 
@@ -7,6 +9,9 @@ export default function GharqaProblemCard({ index, masalah, heirs, updateMasalah
         return new Intl.NumberFormat('id-ID').format(value.replace(/\D/g, ''));
     };
 
+    // Filter ahli waris agar tidak bisa memilih mayit lain
+    const filteredHeirs = heirs.filter(h => !masalah.otherMayitKeys?.includes(h.key));
+
     return (
         <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 relative">
             {canRemove && (
@@ -15,24 +20,32 @@ export default function GharqaProblemCard({ index, masalah, heirs, updateMasalah
                 </button>
             )}
 
-            <h2 className="text-xl font-bold border-b pb-2 mb-4 text-gray-800">
-                Masalah {index + 1}: Perhitungan untuk {masalah.namaMayit}
-            </h2>
             <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Total Harta {masalah.namaMayit}</label>
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Mayit (untuk identifikasi)</label>
                     <input 
                         type="text" 
-                        value={formatCurrency(masalah.tirkah)} 
-                        onChange={(e) => updateMasalah(masalah.id, { tirkah: e.target.value.replace(/\D/g, '') })}
-                        className="w-full p-2 border rounded-md" 
-                        placeholder="Rp 0"
+                        value={masalah.namaMayit} 
+                        onChange={(e) => updateMasalah(masalah.id, { namaMayit: e.target.value })}
+                        className="w-full p-2 border rounded-md font-bold"
                     />
                 </div>
-                {/* PASTIKAN BAGIAN INI ADA */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Total Harta {masalah.namaMayit}</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
+                        <input 
+                            type="text" 
+                            value={formatCurrency(masalah.tirkah)} 
+                            onChange={(e) => updateMasalah(masalah.id, { tirkah: e.target.value.replace(/\D/g, '') })}
+                            className="w-full p-2 pl-10 border rounded-md" 
+                            placeholder="0"
+                        />
+                    </div>
+                </div>
                 <HeirSelector 
                     title={`Ahli Waris ${masalah.namaMayit} yang Masih Hidup`}
-                    heirs={heirs} 
+                    heirs={filteredHeirs} // Gunakan ahli waris yang sudah difilter
                     selectedHeirs={masalah.selectedHeirs} 
                     onHeirToggle={(heir) => {
                         const newHeirs = masalah.selectedHeirs.find(h => h.key === heir.key)

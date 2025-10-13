@@ -1,79 +1,124 @@
+// components/MunasakhatForm.jsx
+
 'use client';
 import { useState } from 'react';
 import HeirSelector from './HeirSelector';
 
-export default function MunasakhotForm({ 
-    heirs,
-    selectedHeirs1, onHeirToggle1, onQuantityChange1,
-    selectedHeirs2, onHeirToggle2, onQuantityChange2,
-    onCalculate, 
-    isLoading 
-}) {
-    const [tirkah, setTirkah] = useState('');
+// Sub-komponen LENGKAP untuk menangani input per masalah
+const ProblemCard = ({ title, problem, setProblem, heirs, showTirkah = true }) => {
+    const formatCurrency = (value) => {
+        if (!value) return '';
+        const number = value.replace(/\D/g, '');
+        return new Intl.NumberFormat('id-ID').format(number);
+    };
+
+    const handleTirkahChange = (e) => {
+        setProblem({ ...problem, tirkah: e.target.value.replace(/\D/g, '') });
+    };
+
+    const onHeirToggle = (heir) => {
+        const newHeirs = problem.selectedHeirs.find(h => h.key === heir.key)
+            ? problem.selectedHeirs.filter(h => h.key !== heir.key)
+            : [...problem.selectedHeirs, { ...heir, quantity: 1 }];
+        setProblem({ ...problem, selectedHeirs: newHeirs });
+    };
+
+    const onQuantityChange = (heirKey, quantity) => {
+        const newHeirs = problem.selectedHeirs.map(h => 
+            h.key === heirKey ? { ...h, quantity: Math.max(1, quantity) } : h
+        );
+        setProblem({ ...problem, selectedHeirs: newHeirs });
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-md border space-y-4">
+            <h3 className="text-xl font-bold text-gray-800 border-b pb-2">{title}</h3>
+            
+            {showTirkah && (
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Total Harta Waris (Tirkah)</label>
+                    <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
+                        <input 
+                            type="text" 
+                            value={formatCurrency(problem.tirkah)} 
+                            onChange={handleTirkahChange} 
+                            className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-semibold text-gray-900" 
+                            placeholder="0" 
+                        />
+                    </div>
+                </div>
+            )}
+
+            <HeirSelector 
+                heirs={heirs} 
+                selectedHeirs={problem.selectedHeirs} 
+                onHeirToggle={onHeirToggle} 
+                onQuantityChange={onQuantityChange} 
+            />
+        </div>
+    );
+};
+
+
+// Komponen Form Utama (Lengkap)
+export default function MunasakhatForm({ heirs, onCalculate, isLoading }) {
+    const [masalah1, setMasalah1] = useState({ tirkah: '', selectedHeirs: [] });
+    const [masalah2, setMasalah2] = useState({ selectedHeirs: [] });
     const [mayitKeduaKey, setMayitKeduaKey] = useState('');
     const [error, setError] = useState('');
 
-    const formatCurrency = (value) => {
-        if (!value) return '';
-        return new Intl.NumberFormat('id-ID').format(value.replace(/\D/g, ''));
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = () => {
         setError('');
-
-        if (selectedHeirs1.length === 0 || !tirkah || parseFloat(tirkah) <= 0 || !mayitKeduaKey || selectedHeirs2.length === 0) {
-            setError('⚠️ Semua kolom wajib diisi dengan benar.');
+        if (!masalah1.tirkah || parseFloat(masalah1.tirkah) <= 0) {
+            setError('Masukkan Tirkah yang valid untuk Masalah Pertama.');
             return;
         }
-        
+        if (masalah1.selectedHeirs.length === 0) {
+            setError('Pilih minimal satu ahli waris untuk Masalah Pertama.');
+            return;
+        }
+        if (!mayitKeduaKey) {
+            setError('Pilih siapa ahli waris dari Masalah Pertama yang meninggal dunia.');
+            return;
+        }
+        if (masalah2.selectedHeirs.length === 0) {
+            setError('Pilih minimal satu ahli waris untuk Masalah Kedua.');
+            return;
+        }
+
         const payload = {
             masalah_pertama: {
-                tirkah: parseFloat(tirkah.replace(/\D/g, '')),
-                ahliWaris: selectedHeirs1.reduce((acc, h) => ({ ...acc, [h.key]: h.quantity }), {})
+                tirkah: masalah1.tirkah,
+                ahliWaris: masalah1.selectedHeirs.reduce((acc, h) => ({ ...acc, [h.key]: h.quantity }), {})
             },
             mayit_kedua_key: mayitKeduaKey,
             masalah_kedua: {
-                ahliWaris: selectedHeirs2.reduce((acc, h) => ({ ...acc, [h.key]: h.quantity }), {})
+                ahliWaris: masalah2.selectedHeirs.reduce((acc, h) => ({ ...acc, [h.key]: h.quantity }), {})
             }
         };
         onCalculate(payload);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid md:grid-cols-2 gap-8">
-                {/* Masalah Pertama */}
-                <div className="space-y-4 bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                    <h2 className="text-xl font-bold border-b pb-2 text-gray-800">1. Masalah Pertama (Mayit Awal)</h2>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Total Harta Awal (Tirkah)</label>
-                        <input type="text" value={formatCurrency(tirkah)} onChange={(e) => setTirkah(e.target.value)} className="w-full p-2 border rounded-md" placeholder="Rp 0" />
-                    </div>
-                    <HeirSelector title="Ahli Waris Mayit Awal" heirs={heirs} selectedHeirs={selectedHeirs1} onHeirToggle={onHeirToggle1} onQuantityChange={onQuantityChange1} />
-                </div>
-
-                {/* Masalah Kedua */}
-                <div className={`space-y-4 bg-white p-6 rounded-lg shadow-md border border-gray-200 transition-opacity ${selectedHeirs1.length > 0 ? 'opacity-100' : 'opacity-50'}`}>
-                    <h2 className="text-xl font-bold border-b pb-2 text-gray-800">2. Masalah Kedua (Mayit Berikutnya)</h2>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Siapa yang Meninggal dari Masalah Pertama?</label>
-                        <select value={mayitKeduaKey} onChange={(e) => setMayitKeduaKey(e.target.value)} className="w-full p-2 border rounded-md" disabled={selectedHeirs1.length === 0}>
-                            <option value="">-- Pilih Ahli Waris --</option>
-                            {selectedHeirs1.filter(h => !h.isMahjub).map(h => <option key={h.key} value={h.key}>{h.nama_id}</option>)}
-                        </select>
-                    </div>
-                    <HeirSelector title="Ahli Waris dari Mayit Berikutnya" heirs={heirs} selectedHeirs={selectedHeirs2} onHeirToggle={onHeirToggle2} onQuantityChange={onQuantityChange2} />
-                </div>
+        <div className="space-y-6">
+            <ProblemCard title="Masalah #1 (Mayit Pertama)" problem={masalah1} setProblem={setMasalah1} heirs={heirs} showTirkah={true} />
+            
+            <div className="bg-white p-6 rounded-lg shadow-md border">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Pilih Ahli Waris dari Masalah #1 yang Meninggal Dunia (Mayit Kedua)</label>
+                <select value={mayitKeduaKey} onChange={e => setMayitKeduaKey(e.target.value)} className="w-full p-3 border-2 border-gray-300 rounded-lg text-gray-900">
+                    <option value="">-- Pilih Mayit Kedua --</option>
+                    {masalah1.selectedHeirs.filter(h => !h.isMahjub).map(h => <option key={h.key} value={h.key}>{h.nama_id}</option>)}
+                </select>
             </div>
 
-            {error && <div className="text-red-600 text-center">{error}</div>}
+            <ProblemCard title="Masalah #2 (Ahli Waris dari Mayit Kedua)" problem={masalah2} setProblem={setMasalah2} heirs={heirs} showTirkah={false} />
 
-            <div className="text-center pt-4">
-                <button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all disabled:bg-gray-400">
-                    {isLoading ? 'Menghitung...' : '🧮 Hitung Munasakhot'}
-                </button>
-            </div>
-        </form>
+            {error && <p className="text-red-600 text-sm font-semibold text-center">{error}</p>}
+
+            <button onClick={handleSubmit} disabled={isLoading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg disabled:bg-gray-400">
+                {isLoading ? 'Menghitung...' : 'Hitung Warisan Munasakhat'}
+            </button>
+        </div>
     );
 }

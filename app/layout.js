@@ -44,6 +44,9 @@ export default function RootLayout({ children }) {
                   <Link href="/haml" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Haml
                   </Link>
+                  <Link href="/gharqa" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                      Gharqa
+                    </Link>
                   <Link href="/mafqud" className="block px-4 py-2 text-gray-600 hover:bg-gray-100">
                     Mafqud
                   </Link>
@@ -78,12 +81,13 @@ export default function RootLayout({ children }) {
                     <Link href="/haml" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                       Haml
                     </Link>
+                    <Link href="/gharqa" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                      Gharqa
+                    </Link>
                     <Link href="/mafqud" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                       Mafqud
                     </Link>
-                    <Link href="/gharqa" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                      Gharqa  
-                    </Link>
+                    
                   </div>
                   <div className="border-t">
                     <Link href="/tentang" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
