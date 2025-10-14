@@ -84,7 +84,7 @@ export default function HomePage() {
         </p>
         <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full border border-green-200">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-sm text-green-700 font-medium">Sedang dalam tahap pengembangan</span>
+          <span className="text-sm text-green-700 font-medium">Sedang Dalam Beta Testing</span>
         </div>
       </div>
 
