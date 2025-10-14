@@ -16,110 +16,189 @@ export default function JaddWalIkhwahDisplay({ data, ahliWaris }) {
     const namaMap = new Map(ahliWaris.map(aw => [aw.key, { nama: aw.nama, namaAr: aw.namaAr }]));
 
     return (
-        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6 my-6">
-            <h3 className="text-xl font-bold text-yellow-900 mb-2">
-                📊 Simulasi Perhitungan Kakek & Saudara (جَدّ والإخوة)
-            </h3>
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-yellow-600 to-amber-600 px-6 py-5">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                        <span className="text-2xl">📊</span>
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">Simulasi Perhitungan Kakek & Saudara</h2>
+                        <p className="text-yellow-100 text-sm mt-1 font-arabic">جَدّ والإخوة</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Alert Kasus Al-Add */}
             {isAlAdd && (
-                <p className="text-sm bg-orange-100 border border-orange-300 rounded p-2 mb-4 text-orange-800">
-                    ⚠️ <strong>Kasus Al-'Ad (العد)</strong>: Saudara seayah ikut dihitung untuk memperkecil bagian kakek, namun tidak mendapat bagian.
-                </p>
+                <div className="mx-6 mt-6 bg-gradient-to-r from-orange-50 to-orange-100 border-2 border-orange-300 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-lg">⚠️</span>
+                        </div>
+                        <div>
+                            <p className="font-bold text-orange-900 mb-1">Kasus Al-'Ad (العد)</p>
+                            <p className="text-sm text-orange-800">
+                                Saudara seayah ikut dihitung untuk memperkecil bagian kakek, namun tidak mendapat bagian.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             )}
-            
-            <div className="overflow-x-auto rounded-lg border border-yellow-200 shadow-sm">
-                <table className="w-full text-sm">
-                    {/* Header Utama */}
-                    <thead className="bg-yellow-100 text-yellow-800 uppercase text-xs">
-                        <tr>
-                            <th className="p-3 text-left font-semibold border-r border-yellow-300" rowSpan={2}>
-                                Ahli Waris
-                            </th>
-                            {skenarioKeys.map(key => (
-                                <th key={key} className="p-3 text-center font-semibold border-r border-yellow-300" colSpan={2}>
-                                    {simulasi[key].nama}
-                                    <br />
-                                    <span className="text-xs font-normal">(AM: {simulasi[key].am})</span>
+
+            {/* Tabel Simulasi */}
+            <div className="p-6">
+                <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border border-gray-200 rounded-t-xl">
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                            <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                        </svg>
+                        Perbandingan Metode Perhitungan
+                    </h3>
+                </div>
+
+                <div className="overflow-x-auto border-x border-b border-gray-200 rounded-b-xl">
+                    <table className="w-full text-sm">
+                        {/* Header Utama */}
+                        <thead className="bg-gray-50 border-b-2 border-gray-200">
+                            <tr>
+                                <th className="px-4 py-4 text-left font-bold text-gray-700 border-r border-gray-200" rowSpan={2}>
+                                    Ahli Waris
                                 </th>
-                            ))}
-                            <th className="p-3 text-center font-semibold border-l border-green-400 bg-green-100" colSpan={2}>
-                                Mas'alatul Jāmi'ah
-                                <br />
-                                <span className="text-xs font-normal">(AM: {jami_ah})</span>
-                            </th>
-                        </tr>
-                        {/* Sub-Header */}
-                        <tr>
-                            {skenarioKeys.map(key => (
-                                <>
-                                    <th key={`${key}-f`} className="p-2 text-center font-semibold border-r border-yellow-200">Furudh</th>
-                                    <th key={`${key}-s`} className="p-2 text-center font-semibold border-r border-yellow-300">Saham</th>
-                                </>
-                            ))}
-                            <th className="p-2 text-center font-semibold border-l border-green-400 bg-green-100">Saham</th>
-                            <th className="p-2 text-center font-semibold border-l border-green-200 bg-green-100">Terbaik</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-gray-700">
-                        {semuaAhliWaris.map(key => {
-                            const info = namaMap.get(key) || { nama: key, namaAr: '-' };
-                            const isKakek = key === 'kakek';
-                            
-                            return (
-                                <tr key={key} className={`border-t border-yellow-200 ${isKakek ? 'bg-blue-50' : ''}`}>
-                                    <td className="p-3 font-semibold bg-gray-50 border-r border-yellow-300">
-                                        {info.nama}
-                                        <br />
-                                        <span className="text-xs font-arabic text-gray-500">{info.namaAr}</span>
-                                    </td>
-                                    {skenarioKeys.map(skey => {
-                                        const bagian = simulasi[skey].pembagian[key];
-                                        return (
-                                            <>
-                                                <td key={`${skey}-f`} className="p-2 text-center text-xs border-r border-yellow-200">
-                                                    {bagian ? bagian.furudh : '-'}
-                                                </td>
-                                                <td key={`${skey}-s`} className="p-2 text-center font-mono border-r border-yellow-300">
-                                                    {bagian ? bagian.saham.toFixed(2).replace('.00', '') : '-'}
-                                                </td>
-                                            </>
-                                        );
-                                    })}
-                                    {/* Kolom Jami'ah */}
-                                    <td className="p-2 text-center font-mono font-bold border-l border-green-400 bg-green-50">
-                                        {isKakek ? simulasi[pilihanTerbaik.key].sahamKakekNormalized.toFixed(2).replace('.00', '') : '-'}
-                                    </td>
-                                    <td className="p-2 text-center border-l border-green-200 bg-green-50">
-                                        {isKakek ? '✅' : ''}
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                        {/* Baris Total */}
-                        <tr className="border-t-2 border-yellow-400 bg-yellow-200 font-bold">
-                            <td className="p-3 text-right border-r border-yellow-300">TOTAL</td>
-                            {skenarioKeys.map(key => (
-                                <>
-                                    <td key={`${key}-tf`} className="p-2 text-center border-r border-yellow-200">-</td>
-                                    <td key={`${key}-ts`} className="p-2 text-center font-mono border-r border-yellow-300">
-                                        {simulasi[key].am}
-                                    </td>
-                                </>
-                            ))}
-                            <td className="p-2 text-center font-mono font-bold border-l border-green-400 bg-green-200">
-                                {jami_ah}
-                            </td>
-                            <td className="p-2 border-l border-green-200 bg-green-200"></td>
-                        </tr>
-                    </tbody>
-                </table>
+                                {skenarioKeys.map(key => (
+                                    <th key={key} className="px-4 py-3 text-center font-bold text-gray-700 border-r border-gray-200" colSpan={2}>
+                                        <div className="mb-1">{simulasi[key].nama}</div>
+                                        <div className="text-xs font-normal text-gray-500">AM: {simulasi[key].am}</div>
+                                    </th>
+                                ))}
+                                <th className="px-4 py-3 text-center font-bold text-green-700 bg-green-50" colSpan={2}>
+                                    <div className="mb-1">Mas'alatul Jāmi'ah</div>
+                                    <div className="text-xs font-normal text-green-600">AM: {jami_ah}</div>
+                                </th>
+                            </tr>
+                            {/* Sub-Header */}
+                            <tr className="bg-gray-100">
+                                {skenarioKeys.map(key => (
+                                    <>
+                                        <th key={`${key}-f`} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 border-r border-gray-100">
+                                            Furudh
+                                        </th>
+                                        <th key={`${key}-s`} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">
+                                            Saham
+                                        </th>
+                                    </>
+                                ))}
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 bg-green-50">
+                                    Saham
+                                </th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 bg-green-50">
+                                    Terbaik
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-gray-700 divide-y divide-gray-100">
+                            {semuaAhliWaris.map((key, index) => {
+                                const info = namaMap.get(key) || { nama: key, namaAr: '-' };
+                                const isKakek = key === 'kakek';
+                                const isEven = index % 2 === 0;
+                                
+                                return (
+                                    <tr key={key} className={`hover:bg-yellow-50 transition-colors ${isEven ? 'bg-white' : 'bg-gray-50/50'} ${isKakek ? 'bg-blue-50/50' : ''}`}>
+                                        <td className="px-4 py-4 border-r border-gray-200">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 ${isKakek ? 'bg-blue-100' : 'bg-yellow-100'} rounded-lg flex items-center justify-center`}>
+                                                    <span className="text-lg">{isKakek ? '👴' : (key.includes('lk') ? '👨' : '👩')}</span>
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-900">{info.nama}</p>
+                                                    <p className="font-arabic text-gray-500 text-xs">{info.namaAr}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        {skenarioKeys.map(skey => {
+                                            const bagian = simulasi[skey].pembagian[key];
+                                            return (
+                                                <>
+                                                    <td key={`${skey}-f`} className="px-4 py-4 text-center border-r border-gray-100">
+                                                        {bagian ? (
+                                                            <span className="inline-block px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full font-semibold">
+                                                                {bagian.furudh}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td key={`${skey}-s`} className="px-4 py-4 text-center font-mono font-semibold text-gray-800 border-r border-gray-200">
+                                                        {bagian ? bagian.saham.toFixed(2).replace('.00', '') : '-'}
+                                                    </td>
+                                                </>
+                                            );
+                                        })}
+                                        {/* Kolom Jami'ah */}
+                                        <td className="px-4 py-4 text-center bg-green-50">
+                                            {isKakek ? (
+                                                <span className="font-mono font-bold text-green-700 text-base">
+                                                    {simulasi[pilihanTerbaik.key].sahamKakekNormalized.toFixed(2).replace('.00', '')}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-4 text-center bg-green-50">
+                                            {isKakek && (
+                                                <div className="inline-flex items-center justify-center w-8 h-8 bg-green-600 rounded-full">
+                                                    <span className="text-white text-lg">✓</span>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {/* Baris Total */}
+                            <tr className="bg-gradient-to-r from-gray-100 to-gray-50 border-t-2 border-gray-300 font-bold text-gray-900">
+                                <td className="px-4 py-4 border-r border-gray-200">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                                        </svg>
+                                        TOTAL
+                                    </div>
+                                </td>
+                                {skenarioKeys.map(key => (
+                                    <>
+                                        <td key={`${key}-tf`} className="px-4 py-4 text-center border-r border-gray-100">-</td>
+                                        <td key={`${key}-ts`} className="px-4 py-4 text-center font-mono text-base border-r border-gray-200">
+                                            {simulasi[key].am}
+                                        </td>
+                                    </>
+                                ))}
+                                <td className="px-4 py-4 text-center font-mono font-bold text-green-700 text-base bg-green-100">
+                                    {jami_ah}
+                                </td>
+                                <td className="px-4 py-4 bg-green-100"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
             
-            <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg text-center">
-                <p className="font-semibold text-green-800">
-                    ✅ Pilihan Terbaik untuk Kakek: <span className="font-bold text-lg">{pilihanTerbaik.nama}</span>
-                    <br />
-                    <span className="text-sm">Saham: {pilihanTerbaik.sahamNormalized} dari {jami_ah}</span>
-                </p>
+            {/* Info Pilihan Terbaik */}
+            <div className="mx-6 mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-5">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-2xl">✓</span>
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-bold text-green-900 text-lg mb-1">
+                            Pilihan Terbaik untuk Kakek: {pilihanTerbaik.nama}
+                        </p>
+                        <p className="text-sm text-green-700">
+                            Saham: <span className="font-mono font-bold">{pilihanTerbaik.sahamNormalized}</span> dari <span className="font-mono font-bold">{jami_ah}</span>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );
