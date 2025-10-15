@@ -38,7 +38,12 @@ export default function RootLayout({ children }) {
                 >
                   Kalkulator
                 </Link>
-
+                <Link 
+                  href="/ahli-waris" 
+                  className="px-4 py-2 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg font-medium transition-all"
+                >
+                  Daftar Ahli Waris
+                </Link>
                 {/* Dropdown Kasus Khusus */}
                 <div className="relative group">
                   <button
@@ -89,6 +94,9 @@ export default function RootLayout({ children }) {
                   <div className="absolute right-0 mt-2 w-64 bg-white shadow-xl rounded-lg border border-gray-200 overflow-hidden">
                     <Link href="/" className="block px-4 py-3 text-gray-700 hover:bg-green-50 hover:text-green-600 border-b border-gray-100 transition-colors">
                       Kalkulator Utama
+                    </Link>
+                    <Link href="/ahli-waris" className="block px-4 py-3 text-gray-700 hover:bg-green-50 hover:text-green-600 border-b border-gray-100 transition-colors">
+                      Daftar Ahli Waris
                     </Link>
                     <div className="border-b border-gray-100">
                       <div className="px-4 py-2 text-xs font-semibold text-gray-500 bg-gray-50">

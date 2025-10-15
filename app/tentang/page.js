@@ -70,7 +70,7 @@ export default function TentangPage() {
     ];
 
     const teknologi = [
-        { name: "Next.js 14", desc: "React Framework", color: "bg-black" },
+        { name: "Next.js 15", desc: "React Framework", color: "bg-black" },
         { name: "Tailwind CSS", desc: "Styling", color: "bg-blue-500" },
         { name: "JavaScript", desc: "Logic & Algorithm", color: "bg-yellow-500" },
         { name: "REST API", desc: "Integration", color: "bg-green-600" }
