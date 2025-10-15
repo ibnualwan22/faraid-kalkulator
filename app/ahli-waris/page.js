@@ -687,7 +687,7 @@ export default function DaftarAhliWarisPage() {
                                     </div>
                                 </div>
                                 <div className="text-sm mt-2 text-green-700 font-arabic font-bold">المُعْتِق</div>
-                                <div className="text-xs text-gray-600 mt-1 bg-green-100 px-3 py-1 rounded-full">Al-Mu'tiq</div>
+                                <div className="text-xs text-gray-600 mt-1 bg-green-100 px-3 py-1 rounded-full">Al-Mutiq</div>
                             </div>
                         )}
                         {(filterGender === 'semua' || filterGender === 'perempuan') && (
@@ -704,7 +704,7 @@ export default function DaftarAhliWarisPage() {
                                     </div>
                                 </div>
                                 <div className="text-sm mt-2 text-emerald-700 font-arabic font-bold">المُعْتِقَة</div>
-                                <div className="text-xs text-gray-600 mt-1 bg-emerald-100 px-3 py-1 rounded-full">Al-Mu'tiqah</div>
+                                <div className="text-xs text-gray-600 mt-1 bg-emerald-100 px-3 py-1 rounded-full">Al-Mutiqah</div>
                             </div>
                         )}
                     </div>
